@@ -1,3 +1,6 @@
+﻿
+
+
 using System;
 using System.IO;
 using System.Net.Http;
@@ -9,6 +12,8 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 using Azure;
 using SkiaSharp;
+
+
 
 // Import namespaces
 using Azure.AI.Vision.ImageAnalysis;
@@ -25,14 +30,16 @@ namespace image_analysis
             
             try
             {
+                DotNetEnv.Env.Load(); // Loads .env file
+
                 // Get config settings from AppSettings
-                IConfigurationBuilder builder = new ConfigurationBuilder().AddJsonFile("appsettings.json");
-                IConfigurationRoot configuration = builder.Build();
-                string aiSvcEndpoint = configuration["AIServicesEndpoint"];
-                string aiSvcKey = configuration["AIServicesKey"];
+                // IConfigurationBuilder builder = new ConfigurationBuilder().AddJsonFile("appsettings.json");
+                // IConfigurationRoot configuration = builder.Build();
+            string aiSvcKey = Environment.GetEnvironmentVariable("AIServicesKey");
+string aiSvcEndpoint = Environment.GetEnvironmentVariable("AIServicesEndpoint");
 
                 // Get image
-                string imageFile = "images/street.jpg";
+                string imageFile = "images/city.jpg";
                 if (args.Length > 0)
                 {
                     imageFile = args[0];
@@ -185,7 +192,7 @@ if (result.People.Values.Count > 0)
             }
 
             // Save the annotated image
-            var peopleFile = "people.jpg";
+            var peopleFile = "saved.jpg";
             using SKFileWStream output = new SKFileWStream(peopleFile);
             bitmap.Encode(output, SKEncodedImageFormat.Jpeg, 100);
             Console.WriteLine($"  Results saved in {peopleFile}\n");

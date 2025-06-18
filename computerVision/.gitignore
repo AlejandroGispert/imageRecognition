@@ -1,0 +1,7 @@
+.env
+bin
+
+/bin/*
+/obj/Debug/*
+
+project.nuget.cache
