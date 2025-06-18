@@ -1,7 +1,4 @@
-﻿
-
-
-using System;
+﻿using System;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -22,12 +19,12 @@ namespace image_analysis
 {
     class Program
     {
-        
+
         static async Task Main(string[] args)
         {
             // Clear the console
             Console.Clear();
-            
+
             try
             {
                 DotNetEnv.Env.Load(); // Loads .env file
@@ -35,8 +32,8 @@ namespace image_analysis
                 // Get config settings from AppSettings
                 // IConfigurationBuilder builder = new ConfigurationBuilder().AddJsonFile("appsettings.json");
                 // IConfigurationRoot configuration = builder.Build();
-            string aiSvcKey = Environment.GetEnvironmentVariable("AIServicesKey");
-string aiSvcEndpoint = Environment.GetEnvironmentVariable("AIServicesEndpoint");
+                string aiSvcKey = Environment.GetEnvironmentVariable("AIServicesKey");
+                string aiSvcEndpoint = Environment.GetEnvironmentVariable("AIServicesEndpoint");
 
                 // Get image
                 string imageFile = "images/city.jpg";
@@ -44,81 +41,99 @@ string aiSvcEndpoint = Environment.GetEnvironmentVariable("AIServicesEndpoint");
                 {
                     imageFile = args[0];
                 }
-                
+
 
                 // Authenticate Azure AI Vision client
-// Authenticate Azure AI Vision client
-ImageAnalysisClient client = new ImageAnalysisClient(
-     new Uri(aiSvcEndpoint),
-     new AzureKeyCredential(aiSvcKey));
+                // Authenticate Azure AI Vision client
+                ImageAnalysisClient client = new ImageAnalysisClient(
+                     new Uri(aiSvcEndpoint),
+                     new AzureKeyCredential(aiSvcKey));
 
                 // Analyze image
-// Analyze image
-using FileStream stream = new FileStream(imageFile, FileMode.Open);
-Console.WriteLine($"\nAnalyzing {imageFile} \n");
+                // Analyze image
+                using FileStream stream = new FileStream(imageFile, FileMode.Open);
+                Console.WriteLine($"\nAnalyzing {imageFile} \n");
 
-ImageAnalysisResult result = client.Analyze(
-     BinaryData.FromStream(stream),
-     VisualFeatures.Caption | 
-     VisualFeatures.DenseCaptions |
-     VisualFeatures.Objects |
-     VisualFeatures.Tags |
-     VisualFeatures.People);
-      
+                ImageAnalysisResult result = client.Analyze(
+                     BinaryData.FromStream(stream),
+                     VisualFeatures.Caption |
+                     VisualFeatures.DenseCaptions |
+                     VisualFeatures.Objects |
+                     VisualFeatures.Tags |
+                     VisualFeatures.People |
+                      VisualFeatures.Read);
+
+
+                // Print the text
+                if (result.Read != null)
+                {
+                    Console.WriteLine($"Text:");
+                    foreach (var line in result.Read.Blocks.SelectMany(block => block.Lines))
+                    {
+                        Console.WriteLine($"  {line.Text}");
+                    }
+                    // Annotate the text in the image
+                    AnnotateLines(imageFile, result.Read);
+
+                    // Find individual words in each line
+                }
+
+
                 // Get image captions
- // Get image captions
-if (result.Caption.Text != null)
-{
-     Console.WriteLine("\nCaption:");
-     Console.WriteLine($"   \"{result.Caption.Text}\", Confidence {result.Caption.Confidence:0.00}\n");
-}
+                // Get image captions
 
-Console.WriteLine(" Dense Captions:");
-foreach (DenseCaption denseCaption in result.DenseCaptions.Values)
-{
-     Console.WriteLine($"   Caption: '{denseCaption.Text}', Confidence: {denseCaption.Confidence:0.00}");
-}
-                
-// Get image tags
-if (result.Tags.Values.Count > 0)
-{
-     Console.WriteLine($"\n Tags:");
-     foreach (DetectedTag tag in result.Tags.Values)
-     {
-         Console.WriteLine($"   '{tag.Name}', Confidence: {tag.Confidence:P2}");
-     }
-}
-            
+                if (result.Caption.Text != null)
+                {
+                    Console.WriteLine("\nCaption:");
+                    Console.WriteLine($"   \"{result.Caption.Text}\", Confidence {result.Caption.Confidence:0.00}\n");
+                }
+
+                Console.WriteLine(" Dense Captions:");
+                foreach (DenseCaption denseCaption in result.DenseCaptions.Values)
+                {
+                    Console.WriteLine($"   Caption: '{denseCaption.Text}', Confidence: {denseCaption.Confidence:0.00}");
+                }
+
+                // Get image tags
+                if (result.Tags.Values.Count > 0)
+                {
+                    Console.WriteLine($"\n Tags:");
+                    foreach (DetectedTag tag in result.Tags.Values)
+                    {
+                        Console.WriteLine($"   '{tag.Name}', Confidence: {tag.Confidence:P2}");
+                    }
+                }
+
                 // Get objects in the image
-if (result.Objects.Values.Count > 0)
-{
-     Console.WriteLine("\nObjects:");
-     foreach (DetectedObject detectedObject in result.Objects.Values)
-     {
-         // PPrint object tag and confidence
-         Console.WriteLine($"  {detectedObject.Tags[0].Name} ({detectedObject.Tags[0].Confidence:P2})");
-     }
-     // Annotate objects in the image
-     await ShowObjects(imageFile, result.Objects);
+                if (result.Objects.Values.Count > 0)
+                {
+                    Console.WriteLine("\nObjects:");
+                    foreach (DetectedObject detectedObject in result.Objects.Values)
+                    {
+                        // PPrint object tag and confidence
+                        Console.WriteLine($"  {detectedObject.Tags[0].Name} ({detectedObject.Tags[0].Confidence:P2})");
+                    }
+                    // Annotate objects in the image
+                    await ShowObjects(imageFile, result.Objects);
 
-}
+                }
 
                 // Get people in the image
-if (result.People.Values.Count > 0)
-{
-     Console.WriteLine($" People:");
+                if (result.People.Values.Count > 0)
+                {
+                    Console.WriteLine($" People:");
 
-     foreach (DetectedPerson person in result.People.Values)
-     {
-         // Print location and confidence of each person detected
-         if (person.Confidence > 0.2)
-         {
-             Console.WriteLine($"   Bounding box {person.BoundingBox}, Confidence: {person.Confidence:P2}");
-         }
-     }
-     // Annotate people in the image
-     await ShowPeople(imageFile, result.People);
-}
+                    foreach (DetectedPerson person in result.People.Values)
+                    {
+                        // Print location and confidence of each person detected
+                        if (person.Confidence > 0.2)
+                        {
+                            Console.WriteLine($"   Bounding box {person.BoundingBox}, Confidence: {person.Confidence:P2}");
+                        }
+                    }
+                    // Annotate people in the image
+                    await ShowPeople(imageFile, result.People);
+                }
 
             }
             catch (Exception ex)
@@ -149,8 +164,8 @@ if (result.People.Values.Count > 0)
                 IsAntialias = true
             };
 
-            SKFont textFont = new SKFont(SKTypeface.Default,24,1,0);
-            
+            SKFont textFont = new SKFont(SKTypeface.Default, 24, 1, 0);
+
             foreach (DetectedObject detectedObject in detectedObjects.Values)
             {
                 // Draw object bounding box
@@ -196,6 +211,52 @@ if (result.People.Values.Count > 0)
             using SKFileWStream output = new SKFileWStream(peopleFile);
             bitmap.Encode(output, SKEncodedImageFormat.Jpeg, 100);
             Console.WriteLine($"  Results saved in {peopleFile}\n");
+
+
+
+
+        }
+
+        static void AnnotateLines(string imageFile, ReadResult readResult)
+        {
+            Console.WriteLine("\nAnnotating detected text lines...");
+
+            using SKBitmap bitmap = SKBitmap.Decode(imageFile);
+            using SKCanvas canvas = new SKCanvas(bitmap);
+
+            SKPaint paint = new SKPaint
+            {
+                Color = SKColors.Red,
+                StrokeWidth = 2,
+                Style = SKPaintStyle.Stroke
+            };
+
+            foreach (var block in readResult.Blocks)
+            {
+                foreach (var line in block.Lines)
+                {
+                    // Draw bounding box for each line
+                    var r = line.BoundingPolygon;
+                    if (r != null && r.Count == 4)
+                    {
+                        var points = new SKPoint[]
+                        {
+                    new SKPoint(r[0].X, r[0].Y),
+                    new SKPoint(r[1].X, r[1].Y),
+                    new SKPoint(r[2].X, r[2].Y),
+                    new SKPoint(r[3].X, r[3].Y),
+                    new SKPoint(r[0].X, r[0].Y) // close the polygon
+                        };
+                        canvas.DrawPoints(SKPointMode.Polygon, points, paint);
+                    }
+                }
+            }
+
+            // Save the annotated image
+            var annotatedFile = "annotated_text.jpg";
+            using SKFileWStream output = new SKFileWStream(annotatedFile);
+            bitmap.Encode(output, SKEncodedImageFormat.Jpeg, 100);
+            Console.WriteLine($"  Results saved in {annotatedFile}\n");
         }
     }
 }
